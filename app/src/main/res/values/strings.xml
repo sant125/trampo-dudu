@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cannon Game</string>
+    <string name="reset_game">Resetar Jogo</string>
+    <string name="lose">Você perdeu!</string>
+    <string name="win">Você ganhou!</string>
+    <string name="score">Pontuação: %1$d</string>
+    <string name="time_remaining">Tempo: %1$.1fs</string>
+</resources>
