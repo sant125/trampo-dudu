@@ -169,65 +169,64 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
             return;
         }
 
-        // Atualizar tempo
-        timeRemaining -= elapsedTime;
-        if (timeRemaining <= 0) {
-            gameOver = true;
-            timeRemaining = 0;
-            return;
-        }
-
-        // Spawn de alvos
-        dificuldade.atualizarDificuldade(elapsedTime);
-        timeSinceLastSpawn += elapsedTime;
-        float intervalo = dificuldade.calcularIntervaloSpawn();
-        if (timeSinceLastSpawn >= intervalo) {
-            spawnTarget();
-            timeSinceLastSpawn = 0;
-        }
-
-        // Atualizar alvos
-        Iterator<Target> targetIterator = targets.iterator();
-        while (targetIterator.hasNext()) {
-            Target target = targetIterator.next();
-            target.update(elapsedTime);
-
-            // Remover alvos fora da tela ou atingidos
-            if (target.isOutOfBounds(screenHeight) || target.isHit()) {
-                targetIterator.remove();
+        synchronized (getHolder()) {
+            // Atualizar tempo
+            timeRemaining -= elapsedTime;
+            if (timeRemaining <= 0) {
+                gameOver = true;
+                timeRemaining = 0;
+                return;
             }
-        }
 
-        // Atualizar blockers
-        Iterator<Blocker> blockerIterator = blockers.iterator();
-        while (blockerIterator.hasNext()) {
-            Blocker blocker = blockerIterator.next();
-            blocker.update(elapsedTime);
-
-            // Remover blockers fora da tela
-            if (blocker.isOutOfBounds(screenHeight)) {
-                blockerIterator.remove();
+            // Spawn de alvos (limitar a 10)
+            dificuldade.atualizarDificuldade(elapsedTime);
+            timeSinceLastSpawn += elapsedTime;
+            float intervalo = dificuldade.calcularIntervaloSpawn();
+            if (timeSinceLastSpawn >= intervalo && targets.size() < 10) {
+                spawnTarget();
+                timeSinceLastSpawn = 0;
             }
-        }
 
-        // Atualizar projéteis
-        Iterator<Cannonball> ballIterator = cannonballs.iterator();
-        while (ballIterator.hasNext()) {
-            Cannonball ball = ballIterator.next();
-            ball.update(elapsedTime);
+            // Atualizar alvos
+            Iterator<Target> targetIterator = targets.iterator();
+            while (targetIterator.hasNext()) {
+                Target target = targetIterator.next();
+                target.update(elapsedTime);
 
-            // Remover projéteis fora da tela ou inativos
-            if (ball.isOutOfBounds(screenWidth, screenHeight) || !ball.isActive()) {
-                ballIterator.remove();
+                if (target.isOutOfBounds(screenHeight) || target.isHit()) {
+                    targetIterator.remove();
+                }
             }
+
+            // Atualizar blockers
+            Iterator<Blocker> blockerIterator = blockers.iterator();
+            while (blockerIterator.hasNext()) {
+                Blocker blocker = blockerIterator.next();
+                blocker.update(elapsedTime);
+
+                if (blocker.isOutOfBounds(screenHeight)) {
+                    blockerIterator.remove();
+                }
+            }
+
+            // Atualizar projéteis
+            Iterator<Cannonball> ballIterator = cannonballs.iterator();
+            while (ballIterator.hasNext()) {
+                Cannonball ball = ballIterator.next();
+                ball.update(elapsedTime);
+
+                if (ball.isOutOfBounds(screenWidth, screenHeight) || !ball.isActive()) {
+                    ballIterator.remove();
+                }
+            }
+
+            // Verificar colisões
+            checkCollisions();
+
+            feedbackVisual.atualizar(elapsedTime);
+            hudPontuacao.setPontuacao(score);
+            hudPontuacao.setTempoRestante(timeRemaining);
         }
-
-        // Verificar colisões
-        checkCollisions();
-
-        feedbackVisual.atualizar(elapsedTime);
-        hudPontuacao.setPontuacao(score);
-        hudPontuacao.setTempoRestante(timeRemaining);
     }
 
     private void spawnTarget() {
@@ -267,17 +266,22 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
 
     public void fireCannonball() {
         if (!gameOver && cannon != null) {
-            Point cannonPos = cannon.getPosition();
-            float startX = cannonPos.x + (float) (Math.cos(cannon.getAngle()) * cannon.getBarrelLength());
-            float startY = cannonPos.y - (float) (Math.sin(cannon.getAngle()) * cannon.getBarrelLength());
+            synchronized (getHolder()) {
+                // Limitar a 20 projéteis simultâneos
+                if (cannonballs.size() >= 20) {
+                    return;
+                }
 
-            Cannonball ball = new Cannonball(startX, startY, (float) cannon.getAngle(), CANNONBALL_VELOCITY, 15);
-            cannonballs.add(ball);
+                Point cannonPos = cannon.getPosition();
+                float startX = cannonPos.x + (float) (Math.cos(cannon.getAngle()) * cannon.getBarrelLength());
+                float startY = cannonPos.y - (float) (Math.sin(cannon.getAngle()) * cannon.getBarrelLength());
 
-            hudPontuacao.incrementarProjeteisDeparados();
+                Cannonball ball = new Cannonball(startX, startY, (float) cannon.getAngle(), CANNONBALL_VELOCITY, 15);
+                cannonballs.add(ball);
 
-            // Reproduzir som de disparo
-            soundManager.playSound(SoundManager.SOUND_FIRE);
+                hudPontuacao.incrementarProjeteisDeparados();
+                soundManager.playSound(SoundManager.SOUND_FIRE);
+            }
         }
     }
 
