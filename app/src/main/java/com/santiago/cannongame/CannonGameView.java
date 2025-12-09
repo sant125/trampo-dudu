@@ -192,8 +192,8 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
             Target target = targetIterator.next();
             target.update(elapsedTime);
 
-            // Remover alvos fora da tela
-            if (target.isOutOfBounds(screenHeight)) {
+            // Remover alvos fora da tela ou atingidos
+            if (target.isOutOfBounds(screenHeight) || target.isHit()) {
                 targetIterator.remove();
             }
         }
@@ -216,8 +216,8 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
             Cannonball ball = ballIterator.next();
             ball.update(elapsedTime);
 
-            // Remover projéteis fora da tela
-            if (ball.isOutOfBounds(screenWidth, screenHeight)) {
+            // Remover projéteis fora da tela ou inativos
+            if (ball.isOutOfBounds(screenWidth, screenHeight) || !ball.isActive()) {
                 ballIterator.remove();
             }
         }

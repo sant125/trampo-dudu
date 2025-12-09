@@ -5,7 +5,8 @@ import android.graphics.Paint;
 import android.graphics.Point;
 
 public class Cannonball {
-    private Point position;
+    private float posX;
+    private float posY;
     private float velocityX;
     private float velocityY;
     private float radius;
@@ -13,41 +14,38 @@ public class Cannonball {
 
     private Paint paint;
 
-    private static final float GRAVITY = 500f; // Pixels por segundo²
+    private static final float GRAVITY = 300f;
 
     public Cannonball(float x, float y, float angle, float velocity, float radius) {
-        this.position = new Point((int) x, (int) y);
+        this.posX = x;
+        this.posY = y;
         this.velocityX = (float) (Math.cos(angle) * velocity);
-        this.velocityY = -(float) (Math.sin(angle) * velocity); // Negativo porque Y cresce para baixo
+        this.velocityY = -(float) (Math.sin(angle) * velocity);
         this.radius = radius;
         this.active = true;
 
-        // Inicializar Paint
         paint = new Paint();
-        paint.setColor(0xFF000000); // Black
+        paint.setColor(0xFF000000);
         paint.setAntiAlias(true);
     }
 
     public void update(double elapsedTime) {
         if (active) {
-            // Aplicar gravidade
             velocityY += GRAVITY * elapsedTime;
-
-            // Atualizar posição
-            position.x += velocityX * elapsedTime;
-            position.y += velocityY * elapsedTime;
+            posX += velocityX * elapsedTime;
+            posY += velocityY * elapsedTime;
         }
     }
 
     public void draw(Canvas canvas) {
         if (active) {
-            canvas.drawCircle(position.x, position.y, radius, paint);
+            canvas.drawCircle(posX, posY, radius, paint);
         }
     }
 
     public boolean isOutOfBounds(int screenWidth, int screenHeight) {
-        return position.x < 0 || position.x > screenWidth ||
-               position.y < 0 || position.y > screenHeight;
+        return posX < 0 || posX > screenWidth ||
+               posY < 0 || posY > screenHeight;
     }
 
     public void deactivate() {
@@ -59,7 +57,7 @@ public class Cannonball {
     }
 
     public Point getPosition() {
-        return position;
+        return new Point((int) posX, (int) posY);
     }
 
     public float getRadius() {
