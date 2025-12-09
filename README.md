@@ -2,6 +2,7 @@
 
 ## Autores
 - Santiago Paiva
+- Juan Pablo
 
 ## Descrição do Módulo
 
