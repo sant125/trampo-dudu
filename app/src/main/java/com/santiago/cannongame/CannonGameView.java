@@ -25,6 +25,9 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
     private List<Target> targets;
     private List<Cannonball> cannonballs;
     private List<Blocker> blockers;
+    private DificuldadeAlvo dificuldade;
+    private FeedbackVisual feedbackVisual;
+    private HudPontuacao hudPontuacao;
 
     // Estado do jogo
     private int score;
@@ -67,6 +70,9 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
 
         // Inicializar som
         soundManager = new SoundManager(context);
+        dificuldade = new DificuldadeAlvo();
+        feedbackVisual = new FeedbackVisual();
+        hudPontuacao = new HudPontuacao();
 
         // Inicializar Paint
         initializePaint();
@@ -105,6 +111,9 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
         targets.clear();
         cannonballs.clear();
         blockers.clear();
+
+        dificuldade.resetar();
+        hudPontuacao.resetar();
     }
 
     @Override
@@ -169,8 +178,10 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
         }
 
         // Spawn de alvos
+        dificuldade.atualizarDificuldade(elapsedTime);
         timeSinceLastSpawn += elapsedTime;
-        if (timeSinceLastSpawn >= TARGET_SPAWN_INTERVAL) {
+        float intervalo = dificuldade.calcularIntervaloSpawn();
+        if (timeSinceLastSpawn >= intervalo) {
             spawnTarget();
             timeSinceLastSpawn = 0;
         }
@@ -213,13 +224,18 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
 
         // Verificar colisões
         checkCollisions();
+
+        feedbackVisual.atualizar(elapsedTime);
+        hudPontuacao.setPontuacao(score);
+        hudPontuacao.setTempoRestante(timeRemaining);
     }
 
     private void spawnTarget() {
         // Spawnar alvo na direita da tela
         int x = screenWidth - TARGET_WIDTH - 50;
         int y = random.nextInt(screenHeight - TARGET_HEIGHT - 200) + 100;
-        float velocityY = (random.nextFloat() * 200 - 100); // -100 a 100
+        float velocidadeBase = dificuldade.calcularVelocidadeAlvo();
+        float velocityY = (random.nextFloat() * velocidadeBase - velocidadeBase/2);
 
         targets.add(new Target(x, y, TARGET_WIDTH, TARGET_HEIGHT, velocityY));
     }
@@ -231,6 +247,9 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
                 if (target.checkCollision(ball)) {
                     ball.deactivate();
                     score += 10;
+                    hudPontuacao.incrementarAlvosDestruidos();
+                    hudPontuacao.incrementarCombo();
+                    feedbackVisual.criarExplosao(ball.getPosition().x, ball.getPosition().y, 0xFFFF0000);
                     soundManager.playSound(SoundManager.SOUND_HIT);
                     break;
                 }
@@ -254,6 +273,8 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
 
             Cannonball ball = new Cannonball(startX, startY, (float) cannon.getAngle(), CANNONBALL_VELOCITY, 15);
             cannonballs.add(ball);
+
+            hudPontuacao.incrementarProjeteisDeparados();
 
             // Reproduzir som de disparo
             soundManager.playSound(SoundManager.SOUND_FIRE);
@@ -282,6 +303,8 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
                         target.draw(canvas);
                     }
 
+                    feedbackVisual.desenhar(canvas);
+
                     // Desenhar blockers
                     for (Blocker blocker : blockers) {
                         blocker.draw(canvas);
@@ -309,18 +332,12 @@ public class CannonGameView extends SurfaceView implements SurfaceHolder.Callbac
     }
 
     private void drawHUD(Canvas canvas) {
-        // Desenhar pontuação
-        canvas.drawText("Pontuação: " + score, 30, 50, textPaint);
+        hudPontuacao.desenharPainelPontuacao(canvas);
+        hudPontuacao.desenharBarraTempo(canvas, screenWidth, screenHeight);
+        hudPontuacao.desenharCombo(canvas, screenWidth);
 
-        // Desenhar tempo restante
-        canvas.drawText(String.format("Tempo: %.1fs", timeRemaining), 30, 100, textPaint);
-
-        // Desenhar mensagem de game over
         if (gameOver) {
-            textPaint.setTextSize(60);
-            canvas.drawText("GAME OVER", screenWidth / 2 - 150, screenHeight / 2, textPaint);
-            textPaint.setTextSize(40);
-            canvas.drawText("Toque para reiniciar", screenWidth / 2 - 180, screenHeight / 2 + 60, textPaint);
+            hudPontuacao.desenharEstatisticasFinais(canvas, screenWidth, screenHeight);
         }
     }
 
